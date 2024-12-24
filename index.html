@@ -1,0 +1,512 @@
+@{
+    ViewData["Title"] = "病人資訊清單";
+    List<SelectListItem> GenderCodeList = (List<SelectListItem>)ViewBag.GenderCodeList;
+    PatientViewModel PatientViewModel = (PatientViewModel)ViewBag.PatientViewModel;
+}
+<div id="patientForm">
+    <div class="modal-header">
+        <h1 class="display-4">病人資訊清單</h1>
+    </div>
+    <div class="modal-body">
+        @* 查詢條件 *@
+        <div class="row">
+            <div class="form-inline col-md-3">
+                <label class="control-label">病歷號</label>
+                <input type="text" class="form-control" id="SearchPatientId" name="SearchPatientId" value="">
+            </div>
+            <div class="form-inline col-md-3">
+                <label class="control-label">身分證字號</label>
+                <input type="text" class="form-control" id="SearchIdNo" name="SearchIdNo" value="" pattern="^[A-Z][0-9]{9}$" title="格式應為1個大寫字母開頭加9位數字" required>
+            </div>
+            <div class="form-inline col-md-3">
+                <label class="control-label">姓</label>
+                <input type="text" class="form-control" id="SearchFamilyName" name="SearchFamilyName" value="">
+            </div>
+            <div class="form-inline col-md-3">
+                <label class="control-label">名</label>
+                <input type="text" class="form-control" id="SearchGivenName" name="SearchGivenName" value="">
+            </div>
+        </div>
+        <div class="row">
+            <div class="form-inline">
+                <button type="button" class="btn btn-primary" style="float:right" onClick="Search()">查詢</button>
+                <button type="button" class="btn btn-success" style="float:right" onClick="Add()">新增</button>
+            </div>
+            <p></p>
+        </div>
+
+        @*資訊清單*@
+        <table class="table table-striped " id="patientList" style="width: max-content; display: none">
+            <thead style="vertical-align: middle; ">
+                <caption>查詢結果</caption>
+                <tr>
+                    <th style="width:10%"></th>
+                    <th style="width:20%">病歷號</th>
+                    <th style="width:20%">姓名</th>
+                    <th style="width:10%">性別</th>
+                    <th style="width:20%">身份證字號</th>
+                    <th style="width:20%">生日</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+        <div>
+            <span id="noData" style="display: none">查無資料</span>
+        </div>
+
+        @*新增/編輯*@
+        <div id="editForm" style="display: none">
+        <form id="myForm">
+            <div class="row" style="display: none">
+                <div class="form-group col-md-12">
+                    <label class="control-label">病歷號</label>
+                    <input type="text" class="form-control" id="PatientId" name="PatientId" value="@PatientViewModel.PatientId" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group col-md-6">
+                    <label class="control-label">姓</label>
+                    <input type="text" class="form-control" id="FamilyName" name="FamilyName" value="@PatientViewModel.FamilyName">
+                </div>
+                <div class="form-group col-md-6">
+                    <label class="control-label">名</label>
+                    <input type="text" class="form-control" id="GivenName" name="GivenName" value="@PatientViewModel.GivenName">
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group col-md-3">
+                    <label class="control-label">身分證字號</label>
+                    <input type="text" class="form-control" id="IdNo" name="IdNo" value="@PatientViewModel.IdNo" pattern="^[A-Z][0-9]{9}$" title="格式應為1個大寫字母開頭加9位數字" maxlength="10" required>
+                </div>
+                <div class="form-group col-md-3">
+                    <label class="control-label">生日</label>
+                    <input type="date" class="form-control" id="Birthday" name="Birthday" value="@PatientViewModel.Birthday.ToString("yyyy-MM-dd")">
+                </div>
+                <div class="form-group col-md-3">
+                    <label>性別</label>
+                    @Html.DropDownList("group", GenderCodeList, "請下拉選擇", new { @class = "form-control", id = "Gender" })
+                </div>
+                <div class="form-group col-md-3">
+                    <label class="control-label">連絡電話</label>
+                    <input type="text" class="form-control" id="Telecom" name="Telecom" value="09" maxlength="10" placeholder="09xxxxxxxx" required />
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group col-md-12">
+                    <label class="control-label">住址</label>
+                    <textarea class="form-control" rows="3" id="Address" name="Address">@PatientViewModel.Address</textarea>
+                </div>
+            </div>
+        </div></form>
+    </div>
+    <div class="modal-footer" style="display: flex; align-items: center;">
+    <!-- 重置按鈕 -->
+    <button 
+        type="button" 
+        class="btn btn-secondary" 
+        id="resetButton" 
+        style="background-color: white; color: black; border: 1px solid black; margin-right: 10px;" 
+        onClick="resetForm()">
+        重置
+    </button>
+
+    <!-- 儲存按鈕 -->
+    <button 
+        type="button" 
+        class="btn btn-primary" 
+        id="submitButton" 
+        style="display: none;" 
+        onClick="Submit()">
+        儲存
+    </button>
+</div>
+    </div>
+       @*確認資料是否有誤*@
+    <div id="confirmationForm" style="display: none">
+        <h4>請確認以下資料</h4>
+        <div class="row">
+            <div class="form-group col-md-6">
+                <label class="control-label">姓: </label>
+                <span id="confirmFamilyName"></span>
+            </div>
+            <div class="form-group col-md-6">
+                <label class="control-label">名: </label>
+                <span id="confirmGivenName"></span>
+            </div>
+        </div>
+        <br />
+        <div class="row">
+            <div class="form-group col-md-3">
+                <label class="control-label">身分證字號: </label>
+                <span id="confirmIdNo"></span>
+            </div>
+            <div class="form-group col-md-3">
+                <label class="control-label">生日: </label>
+                <span id="confirmBirthday"></span>
+            </div>
+            <div class="form-group col-md-3">
+                <label>性別: </label>
+                <span id="confirmGender"></span>
+            </div>
+            <div class="form-group col-md-3">
+                <label class="control-label">連絡電話: </label>
+                <span id="confirmTelecom"></span>
+            </div>
+        </div>
+        <br />
+        <div class="row">
+            <div class="form-group col-md-12">
+                <label class="control-label">住址: </label>
+                <span id="confirmAddress"></span>
+            </div>
+        </div>
+        <br />
+        <div class="modal-footer">
+            <button type="button" class="btn btn-primary" onClick="SaveData()">送出</button>
+            <button type="button" class="btn btn-secondary" onClick="EditData()">修改</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* 預設輸入框樣式 */
+    input {
+        border: 1px solid #ccc;
+        padding: 8px;
+        border-radius: 4px;
+        outline: none;
+    }
+
+        /* 錯誤狀態的紅框樣式 */
+        input.error,
+        #Birthday.error,
+        #Gender.error,
+        #Address.error {
+            border: 2px solid red;
+        }
+</style>
+
+<script>
+    /** 查詢 **/
+    function Search() {
+        // console.log("查詢結果：", result); // 檢查回傳的資料
+        var idNo = document.getElementById("SearchIdNo").value;
+        var idNoPattern = /^[A-Z][0-9]{9}$/;
+        // 驗證身分證字號格式
+        if (idNo && !idNoPattern.test(idNo)) {
+            alert("請輸入正確的身分證字號(格式應為1個大寫字母開頭加9位數字)");
+            return;
+        }
+
+        $.ajax({
+            url: '@Url.Content("~/Patient/Search")',
+            method: 'POST',
+            dataType: 'json',
+            data: {
+                patientId: document.getElementById("SearchPatientId").value,
+                //idNo: document.getElementById("SearchIdNo").value,
+                idNo: idNo,
+                familyName: document.getElementById("SearchFamilyName").value,
+                givenName: document.getElementById("SearchGivenName").value
+            },
+            success: function (result) {
+                if (result.status != 'error') {
+
+                    // 確認查詢結果是否有值
+                    if (result.length > 0) {
+                        document.getElementById('patientList').style.display = "block";
+                        document.getElementById('noData').style.display = "none";
+
+                        SearchList(result);
+                    }
+                    else {
+                        document.getElementById('patientList').style.display = "none";
+                        document.getElementById('noData').style.display = "block";
+                    }
+
+                    return;
+                }
+                alert(result.message);
+            },
+            error: function (err) {
+                alert(err.responseText);
+            }
+        });
+    };
+
+    /** 產生資料列表 **/
+    function SearchList(result) {
+        var table = document.getElementById("patientList");
+
+        if (table.rows.length > 1) {
+            for (var i = 1; i < table.rows.length;) {
+                table.deleteRow(i);
+            }
+        }
+
+        for (let i = 0; i < result.length; i++) {
+            var row = table.insertRow(i + 1);
+
+            var cell1 = row.insertCell(0);
+            var cell2 = row.insertCell(1);
+            var cell3 = row.insertCell(2);
+            var cell4 = row.insertCell(3);
+            var cell5 = row.insertCell(4);
+            var cell6 = row.insertCell(5);
+
+            cell1.innerHTML = `<button type="button" class="btn btn-warning" onClick="Update(` + result[i].patientId + `)">修改</button>
+                                       <button type="button" class="btn btn-danger" onClick="Delete(`+ result[i].patientId + `)">刪除</button>`;
+            cell2.innerHTML = result[i].patientId;
+            cell3.innerHTML = result[i].familyName + result[i].givenName;
+            cell4.innerHTML = (result[i].gender == 'M') ? '男' : '女';
+            cell5.innerHTML = result[i].idNo;
+            cell6.innerHTML = new Date(result[i].birthday).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        }
+    };
+
+     /** 儲存 */
+ function Submit() {
+
+     // 檢查必填欄位
+     var requiredFields = [
+         { id: 'FamilyName', label: '姓' },
+         { id: 'GivenName', label: '名' },
+         { id: 'IdNo', label: '身分證字號' },
+         { id: 'Birthday', label: '生日' },
+         { id: 'Gender', label: '性別' },
+         { id: 'Telecom', label: '連絡電話' },
+         { id: 'Address', label: '住址' }
+     ];
+
+     var errorMessages = [];
+     var missingFields = [];
+     var phoneError = false;
+     var idError = false;
+
+     // 重置所有欄位樣式
+     for (var i = 0; i < requiredFields.length; i++) {
+         var field = document.getElementById(requiredFields[i].id);
+         field.classList.remove('error'); // 清除紅框
+     }
+
+     // 檢查是否有欄位未填寫
+     for (var i = 0; i < requiredFields.length; i++) {
+         var field = document.getElementById(requiredFields[i].id);
+         if (!field.value.trim()) {
+             missingFields.push(requiredFields[i].label);  // 記錄未填寫的欄位
+             field.classList.add('error');  // 為未填寫欄位添加紅框
+         }
+     }
+
+     // 處理未填寫欄位的錯誤訊息
+     if (missingFields.length > 0) {
+         errorMessages.push('請填寫以下欄位：\n' + missingFields.join('\n'));
+     }
+
+     // 檢查身分證字號格式
+     var idNoInput = document.getElementById("IdNo");
+     var idNo = idNoInput.value.trim();
+     var genderInput = document.getElementById("Gender"); 
+     var gender = genderInput ? genderInput.value : ""; 
+     if (idNo) {
+         if (!/^[A-Z][0-9]{9}$/.test(idNo)) {
+             idError = true;
+             idNoInput.classList.add('error'); // 添加紅框
+             errorMessages.push('請輸入正確的身分證字號（格式應為1個大寫字母加9位數字）');
+         } else {
+             if (idNo.charAt(1) === '1' && gender === 'F') {
+             // 如果第二碼是1但性別選為女
+                idError = true;
+                genderInput.classList.add('error'); // 添加紅框
+                errorMessages.push('身分證字號的第二碼和選擇的性別不符');
+             } else if (idNo.charAt(1) === '2' && gender === 'M') {
+                // 如果第二碼是2但性別選為男
+                idError = true;
+                genderInput.classList.add('error'); // 添加紅框
+                errorMessages.push('身分證字號的第二碼和選擇的性別不符');
+             } else if (idNo.charAt(1) !== '1' && idNo.charAt(1) !== '2') {
+                // 如果第二碼不是1或2
+                idError = true;
+                idNoInput.classList.add('error'); // 添加紅框
+                errorMessages.push('身分證字號的第二碼應為1或2（代表性別）');
+             } else {
+                // 如果第二碼正確且與性別匹配，移除錯誤樣式
+                idNoInput.classList.remove('error'); // 移除紅框
+             }
+         }
+     } else {
+         idNoInput.classList.add('error'); // 添加紅框
+     }
+
+     // 檢查電話號碼格式
+     var telecomInput = document.getElementById('Telecom');
+     var phoneNumber = telecomInput.value.trim();
+     if (!phoneNumber) {
+         phoneError = true;
+         telecomInput.classList.add('error');
+     } else if (!/^\d+$/.test(phoneNumber)) {
+         phoneError = true;
+         telecomInput.classList.add('error');
+         errorMessages.push('電話號碼只能包含數字');
+     } else if (!/^09\d{8}$/.test(phoneNumber)) {
+         phoneError = true;
+         telecomInput.classList.add('error');
+         errorMessages.push('請輸入正確的手機號碼（以09開頭，且為10個數字）');
+     }
+
+
+     // 顯示所有錯誤訊息
+     if (errorMessages.length > 0) {
+         alert(errorMessages.join('\n\n'));
+         return;
+     }
+
+        // 如果沒有錯誤，則顯示確認畫面
+        document.getElementById('editForm').style.display = "none";
+        document.getElementById('submitButton').style.display = "none";
+        document.getElementById('confirmationForm').style.display = "block";
+
+        // 顯示已填寫的資料
+        document.getElementById('confirmFamilyName').innerText = document.getElementById('FamilyName').value;
+        document.getElementById('confirmGivenName').innerText = document.getElementById('GivenName').value;
+        document.getElementById('confirmIdNo').innerText = document.getElementById('IdNo').value;
+        document.getElementById('confirmBirthday').innerText = document.getElementById('Birthday').value;
+        document.getElementById('confirmGender').innerText = document.getElementById('Gender').options[document.getElementById('Gender').selectedIndex].text;
+        document.getElementById('confirmTelecom').innerText = document.getElementById('Telecom').value;
+        document.getElementById('confirmAddress').innerText = document.getElementById('Address').value;
+    };
+
+    // 返回修改畫面
+    function EditData() {
+        document.getElementById('confirmationForm').style.display = "none";
+        document.getElementById('editForm').style.display = "block";
+        document.getElementById('submitButton').style.display = "block";
+    }
+
+    // 儲存資料到資料庫
+    function SaveData() {
+        var idNo = document.getElementById("IdNo").value;
+        // 設定性別欄位
+        var gender = document.getElementById("Gender").value;
+        var formData = {
+            PatientId: document.getElementById("PatientId").value,
+            //IdNo: document.getElementById("IdNo").value,
+            IdNo: idNo,
+            Active: true,
+            FamilyName: document.getElementById("FamilyName").value,
+            GivenName: document.getElementById("GivenName").value,
+            Telecom: document.getElementById("Telecom").value,
+            // Gender: document.getElementById("Gender").value,
+            Gender: gender,
+            Birthday: document.getElementById("Birthday").value,
+            Address: document.getElementById("Address").value,
+        }
+
+        $.ajax({
+            url: '@Url.Content("~/Patient/Save")',
+            method: 'POST',
+            dataType: 'json',
+            data: { patientViewModel: formData },
+            success: function (result) {
+                if (result > 0) {
+                    alert("儲存成功");
+                    // 更新資料列表
+                    Search();
+                } else {
+                    alert(result.Error);
+                }
+                document.getElementById('confirmationForm').style.display = "none";
+            },
+            error: function (err) {
+                alert(err.responseText);
+            }
+        });
+    }
+
+    /** 新增 **/
+    function Add() {
+        // 顯示編輯畫面
+        var editForm = document.getElementById('editForm');
+        if (editForm) {
+            editForm.style.display = "block";
+        } else {
+            console.log("editForm 元素不存在");
+        }
+
+        document.getElementById('submitButton').style.display = "block";
+
+        //帶入預設空值
+        document.getElementById("PatientId").value = 0;
+        document.getElementById("FamilyName").value = "";
+        document.getElementById("GivenName").value = "";
+        document.getElementById("IdNo").value = "";
+        //document.getElementById("Birthday").value = new Date().toLocaleDateString('en-CA'); //英文-加拿大(yyyy-MM-dd)
+        document.getElementById("Birthday").value = "";
+        document.getElementById("Gender").value = "";
+        document.getElementById("Telecom").value = "";
+        document.getElementById("Address").value = "";
+    };
+
+    /** 修改 **/
+    function Update(id) {
+        console.log('Update-id', id);
+        $.ajax({
+            url: '@Url.Content("~/Patient/Search")',
+            method: 'POST',
+            dataType: 'json',
+            data: {
+                patientId: id
+            },
+            success: function (result) {
+                console.log(result);
+                if (result) {
+                    // 顯示編輯畫面
+                    document.getElementById('editForm').style.display = "block";
+                    document.getElementById('submitButton').style.display = "block";
+
+                    document.getElementById("PatientId").value = result[0].patientId;
+                    document.getElementById("FamilyName").value = result[0].familyName;
+                    document.getElementById("GivenName").value = result[0].givenName;
+                    document.getElementById("IdNo").value = result[0].idNo;
+                    document.getElementById("Birthday").value = new Date(result[0].birthday).toLocaleDateString('en-CA'); //英文-加拿大(yyyy-MM-dd)
+                    document.getElementById("Gender").value = result[0].gender;
+                    document.getElementById("Telecom").value = result[0].telecom;
+                    document.getElementById("Address").value = result[0].address;
+                    return;
+                }
+                alert(result.message);
+            },
+            error: function (err) {
+                alert(err.responseText);
+            }
+        });
+    };
+
+    /** 刪除 **/
+    function Delete(id) {
+        //console.log('Delete-id',id);
+        $.ajax({
+            url: '@Url.Content("~/Patient/Delete")',
+            method: 'POST',
+            dataType: 'json',
+            data: {
+                patientId: id
+            },
+            success: function (result) {
+                if (result) {
+                    Search();
+                    alert("刪除成功");
+                    return;
+                }
+                alert(result.message);
+            },
+            error: function (err) {
+                alert(err.responseText);
+            }
+        });
+    };
+function resetForm(){
+document.getElementById("myForm").reset();}
+
+</script>
